@@ -149,4 +149,387 @@
                 အသုံးပြုသူများ၏ အချက်အလက်အသုံးပြုမှုနှင့် ငွေပေးချေမှုအခြေအနေများကို ပုံစံမျိုးစုံဖြင့် ကြည့်ရှုနိုင်ပါတယ်။
                 ဒီဇယားများဟာ အချက်အလက်အသစ်တွေထည့်လိုက်တာနဲ့ အလိုအလျောက် ပြောင်းလဲသွားပါလိမ့်မယ်။
             </p>
-            <div class="grid grid-cols-1 md:grid
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl p-6 shadow-md flex flex-col justify-center items-center">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">အသုံးပြုထားသည့် Speed MB</h3>
+                    <div class="chart-container">
+                        <canvas id="mbUsageChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-md flex flex-col justify-center items-center">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">ကျန်ရှိငွေ အချိုးအစား</h3>
+                    <div class="chart-container">
+                        <canvas id="paymentStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <form id="userForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-6 rounded-lg shadow-inner">
+            <h2 id="formTitle" class="col-span-full text-xl font-semibold text-gray-700 mb-2">အသုံးပြုသူ အသစ်ထည့်ရန်</h2>
+            <input type="hidden" id="docId">
+            <div class="col-span-1">
+                <label for="userNameInput" class="block text-sm font-medium text-gray-700">အမည်</label>
+                <input type="text" id="userNameInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1">
+                <label for="userStartDateInput" class="block text-sm font-medium text-gray-700">စတင်ရက်</label>
+                <input type="date" id="userStartDateInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1">
+                <label for="userEndDateInput" class="block text-sm font-medium text-gray-700">သက်တမ်းကုန်ဆုံးရက်</label>
+                <input type="date" id="userEndDateInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1">
+                <label for="mbUsedInput" class="block text-sm font-medium text-gray-700">အသုံးပြုထားသည့် MB ပမာဏ</label>
+                <input type="number" id="mbUsedInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1">
+                <label for="totalAmountInput" class="block text-sm font-medium text-gray-700">ကျသင့်ငွေ</label>
+                <input type="number" id="totalAmountInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1">
+                <label for="paidAmountInput" class="block text-sm font-medium text-gray-700">ပေးချေထားသောငွေ</label>
+                <input type="number" id="paidAmountInput" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-1 flex items-end">
+                <button type="submit" id="formSubmitButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md shadow-lg transition-colors">
+                    အသုံးပြုသူ အသစ်ထည့်ရန်
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // DOM elements
+        const loginContainer = document.getElementById('loginContainer');
+        const loginForm = document.getElementById('loginForm');
+        const loginStatusMessage = document.getElementById('loginStatusMessage');
+        const mainContent = document.getElementById('mainContent');
+        const userForm = document.getElementById('userForm');
+        const userTableBody = document.getElementById('userTableBody');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const searchBar = document.getElementById('searchBar');
+        const totalAmountSumEl = document.getElementById('totalAmountSum');
+        const paidAmountSumEl = document.getElementById('paidAmountSum');
+        const remainingAmountSumEl = document.getElementById('remainingAmountSum');
+        const mbUsageChartCtx = document.getElementById('mbUsageChart').getContext('2d');
+        const paymentStatusChartCtx = document.getElementById('paymentStatusChart').getContext('2d');
+        const formTitle = document.getElementById('formTitle');
+        const formSubmitButton = document.getElementById('formSubmitButton');
+        const docIdInput = document.getElementById('docId');
+
+        const userNameInput = document.getElementById('userNameInput');
+        const userStartDateInput = document.getElementById('userStartDateInput');
+        const userEndDateInput = document.getElementById('userEndDateInput');
+        const mbUsedInput = document.getElementById('mbUsedInput');
+        const totalAmountInput = document.getElementById('totalAmountInput');
+        const paidAmountInput = document.getElementById('paidAmountInput');
+    
+        let allUsers = [];
+        let mbUsageChart, paymentStatusChart;
+    
+        // Default users array
+        let wifiUsers = [
+            { id: "1", username: "Aung Aung", startDate: "2023-08-01", endDate: "2023-09-01", mbUsed: 15000, totalAmount: 15000, paidAmount: 15000 },
+            { id: "2", username: "Maung Maung", startDate: "2023-08-10", endDate: "2023-09-10", mbUsed: 12000, totalAmount: 12000, paidAmount: 10000 },
+            { id: "3", username: "Mya Mya", startDate: "2023-08-15", endDate: "2023-09-15", mbUsed: 18000, totalAmount: 18000, paidAmount: 15000 },
+        ];
+    
+        // A simple UUID generator for new users
+        const generateUUID = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+    
+        const showMessage = (message, isError = false) => {
+            const messageBox = document.createElement('div');
+            messageBox.innerText = message;
+            messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                messageBox.remove();
+            }, 3000);
+        };
+    
+        const initCharts = () => {
+            if (mbUsageChart) {
+                mbUsageChart.destroy();
+            }
+            if (paymentStatusChart) {
+                paymentStatusChart.destroy();
+            }
+    
+            const baseChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                }
+            };
+    
+            const mbUsageChartOptions = {
+                ...baseChartOptions,
+                plugins: {
+                    ...baseChartOptions.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: (tooltipItem) => {
+                                const label = tooltipItem.dataset.label || '';
+                                const value = tooltipItem.parsed.y;
+                                return `${label}: ${value} MB`;
+                            }
+                        }
+                    }
+                }
+            };
+    
+            const paymentStatusChartOptions = {
+                ...baseChartOptions,
+                plugins: {
+                    ...baseChartOptions.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: (tooltipItem) => {
+                                const label = tooltipItem.label || '';
+                                const value = tooltipItem.parsed;
+                                return `${label}: ${value.toLocaleString()} ကျပ်`;
+                            }
+                        }
+                    }
+                }
+            };
+    
+            mbUsageChart = new Chart(mbUsageChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Speed MB',
+                        data: [],
+                        backgroundColor: 'rgba(79, 70, 229, 0.6)',
+                        borderColor: 'rgba(79, 70, 229, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: mbUsageChartOptions
+            });
+    
+            paymentStatusChart = new Chart(paymentStatusChartCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ပေးချေပြီး', 'ပေးရန်ကျန်'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#f87171'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: paymentStatusChartOptions
+            });
+        };
+    
+        const updateCharts = () => {
+            const userLabels = allUsers.map(user => user.username.split(' ').map(word => {
+                if (word.length > 16) {
+                    return word.slice(0, 13) + '...';
+                }
+                return word;
+            }).join(' '));
+            const mbData = allUsers.map(user => user.mbUsed);
+            mbUsageChart.data.labels = userLabels;
+            mbUsageChart.data.datasets[0].data = mbData;
+            mbUsageChart.update();
+    
+            const totalPaid = allUsers.reduce((sum, user) => sum + user.paidAmount, 0);
+            const totalRemaining = allUsers.reduce((sum, user) => sum + (user.totalAmount - user.paidAmount), 0);
+            paymentStatusChart.data.datasets[0].data = [totalPaid, totalRemaining];
+            paymentStatusChart.update();
+        };
+    
+        const updateSummaryMetrics = () => {
+            const totalAmountSum = allUsers.reduce((sum, user) => sum + user.totalAmount, 0);
+            const paidAmountSum = allUsers.reduce((sum, user) => sum + user.paidAmount, 0);
+            const remainingAmountSum = totalAmountSum - paidAmountSum;
+            totalAmountSumEl.innerText = `${totalAmountSum.toLocaleString()} ကျပ်`;
+            paidAmountSumEl.innerText = `${paidAmountSum.toLocaleString()} ကျပ်`;
+            remainingAmountSumEl.innerText = `${remainingAmountSum.toLocaleString()} ကျပ်`;
+        };
+    
+        const initApp = () => {
+            allUsers = [...wifiUsers];
+            initCharts();
+            filterAndRenderUsers(searchBar.value);
+            updateSummaryMetrics();
+            updateCharts();
+        };
+    
+        window.editUser = (docId) => {
+            const userToEdit = allUsers.find(user => user.id === docId);
+            if (userToEdit) {
+                docIdInput.value = userToEdit.id;
+                userNameInput.value = userToEdit.username;
+                userStartDateInput.value = userToEdit.startDate;
+                userEndDateInput.value = userToEdit.endDate;
+                mbUsedInput.value = userToEdit.mbUsed;
+                totalAmountInput.value = userToEdit.totalAmount;
+                paidAmountInput.value = userToEdit.paidAmount;
+    
+                formTitle.innerText = 'အသုံးပြုသူ အချက်အလက် ပြင်ဆင်ရန်';
+                formSubmitButton.innerText = 'အချက်အလက် ပြင်ဆင်ရန်';
+            }
+        };
+    
+        window.deleteUser = (docId) => {
+            const index = allUsers.findIndex(user => user.id === docId);
+            if (index !== -1) {
+                allUsers.splice(index, 1);
+                filterAndRenderUsers(searchBar.value);
+                updateSummaryMetrics();
+                updateCharts();
+                showMessage("အသုံးပြုသူကို အောင်မြင်စွာ ဖျက်လိုက်ပါပြီ။");
+            } else {
+                showMessage("ဖျက်ရာတွင် အမှားအယွင်းဖြစ်ပေါ်ခဲ့ပါသည်။", true);
+            }
+        };
+    
+        userForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const docId = docIdInput.value;
+            const userData = {
+                username: userNameInput.value,
+                startDate: userStartDateInput.value,
+                endDate: userEndDateInput.value,
+                mbUsed: parseInt(mbUsedInput.value),
+                totalAmount: parseInt(totalAmountInput.value),
+                paidAmount: parseInt(paidAmountInput.value),
+            };
+    
+            if (docId) {
+                const userIndex = allUsers.findIndex(user => user.id === docId);
+                if (userIndex !== -1) {
+                    allUsers[userIndex] = { ...allUsers[userIndex], ...userData };
+                    showMessage("အသုံးပြုသူအချက်အလက် အောင်မြင်စွာ ပြင်ဆင်ပြီးပါပြီ။");
+                } else {
+                    showMessage("အချက်အလက် သိမ်းဆည်းရာတွင် အမှားအယွင်းဖြစ်ပေါ်ခဲ့ပါသည်။", true);
+                }
+            } else {
+                const newUser = { id: generateUUID(), ...userData };
+                allUsers.push(newUser);
+                showMessage("အသုံးပြုသူအသစ် အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
+            }
+    
+            userForm.reset();
+            docIdInput.value = '';
+            formTitle.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
+            formSubmitButton.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
+            filterAndRenderUsers(searchBar.value);
+            updateSummaryMetrics();
+            updateCharts();
+        });
+    
+        searchBar.addEventListener('keyup', (e) => {
+            filterAndRenderUsers(e.target.value);
+        });
+    
+        const filterAndRenderUsers = (query) => {
+            const lowerCaseQuery = query.toLowerCase();
+            const filteredUsers = allUsers.filter(user =>
+                user.username.toLowerCase().includes(lowerCaseQuery)
+            );
+            renderUsers(filteredUsers);
+        };
+    
+        const renderUsers = (users) => {
+            userTableBody.innerHTML = '';
+            const today = new Date();
+            users.forEach((user, index) => {
+                const row = document.createElement('tr');
+                const endDate = new Date(user.endDate);
+                const oneDayInMs = 24 * 60 * 60 * 1000;
+                const timeDiff = endDate.getTime() - today.getTime();
+                const timeDiffDays = Math.ceil(timeDiff / oneDayInMs);
+                let warningClass = '';
+                if (timeDiffDays <= 7) {
+                    warningClass = 'warning-red';
+                } else if (timeDiffDays <= 15) {
+                    warningClass = 'warning-yellow';
+                } else if (timeDiffDays <= 30) {
+                    warningClass = 'warning-green';
+                }
+                const remainingAmount = user.totalAmount - user.paidAmount;
+                row.innerHTML = `
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.username}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.startDate}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.endDate}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${remainingAmount.toLocaleString()} ကျပ်</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div class="warning-light ${warningClass}"></div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="editUser('${user.id}')" class="text-indigo-600 hover:text-indigo-900 mr-4">ပြင်ဆင်ရန်</button>
+                        <button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-900">ဖျက်ရန်</button>
+                    </td>
+                `;
+                userTableBody.appendChild(row);
+            });
+        };
+    
+        function downloadExcel() {
+            if (allUsers.length === 0) {
+                showMessage("Download လုပ်ရန် အချက်အလက်မရှိပါ။", true);
+                return;
+            }
+    
+            const data = [
+                ["နံပါတ်", "အမည်", "စတင်ရက်", "သက်တမ်းကုန်ဆုံးရက်", "ကျန်ရှိငွေ", "အသုံးပြုထားသည့် MB"]
+            ];
+    
+            allUsers.forEach((user, index) => {
+                const remainingAmount = user.totalAmount - user.paidAmount;
+                data.push([
+                    index + 1,
+                    user.username,
+                    user.startDate,
+                    user.endDate,
+                    remainingAmount,
+                    user.mbUsed
+                ]);
+            });
+    
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "အသုံးပြုသူစာရင်း");
+            XLSX.writeFile(wb, "wifi_users_report.xlsx");
+    
+            showMessage("Excel ကို အောင်မြင်စွာ Download လုပ်ပြီးပါပြီ။");
+        }
+    
+        window.downloadExcel = downloadExcel;
+    
+        // Login form submission handler
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+    
+            if (usernameInput === 'wifiservice' && passwordInput === 'wifiservice') {
+                loginContainer.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                initApp();
+            } else {
+                loginStatusMessage.innerText = "အသုံးပြုသူအမည် သို့မဟုတ် လျှို့ဝှက်နံပါတ် မှားယွင်းနေပါသည်။";
+                loginStatusMessage.classList.remove('hidden');
+            }
+        });
+    
+        // Initial setup for charts and data
+        initCharts();
+    </script>
+</body>
+</html>
