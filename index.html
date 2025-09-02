@@ -6,7 +6,6 @@
     <title>WiFi ဝန်ဆောင်မှု စီမံခန့်ခွဲမှု</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- XLSX library for Excel download -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -64,7 +63,6 @@
 </head>
 <body class="p-4 sm:p-8 bg-gray-100 min-h-screen flex flex-col items-center">
 
-    <!-- Login Container -->
     <div id="loginContainer" class="bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-md flex flex-col items-center justify-center space-y-6">
         <h1 class="text-3xl font-bold text-gray-800">Login ဝင်ရန်</h1>
         <p class="text-gray-600 text-center">Dashboad ကို ဆက်လက်ကြည့်ရှုရန် အသုံးပြုသူအမည်နှင့် လျှို့ဝှက်နံပါတ်ဖြည့်ပါ</p>
@@ -84,7 +82,6 @@
         </form>
     </div>
 
-    <!-- Main Content Container -->
     <div id="mainContent" class="bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-6xl space-y-12 hidden">
         <header class="flex flex-col sm:flex-row items-center justify-between mb-8 pb-4 border-b">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">WiFi ဝန်ဆောင်မှု Dashboad</h1>
@@ -93,7 +90,6 @@
             </div>
         </header>
 
-        <!-- Summary & Key Metrics Section -->
         <section id="summary-metrics" class="space-y-6">
             <h2 class="text-2xl font-semibold text-gray-700">အကျဉ်းချုပ် အချက်အလက်များ</h2>
             <p class="text-gray-600">
@@ -116,7 +112,6 @@
             </div>
         </section>
 
-        <!-- Detailed User Breakdown Section -->
         <section id="user-details" class="space-y-6">
             <h2 class="text-2xl font-semibold text-gray-700">အသုံးပြုသူ အသေးစိတ်</h2>
             <p class="text-gray-600">
@@ -148,7 +143,6 @@
             </div>
         </section>
 
-        <!-- Interactive Data Charts Section -->
         <section id="data-charts" class="space-y-6">
             <h2 class="text-2xl font-semibold text-gray-700">အချက်အလက်ဇယားများ</h2>
             <p class="text-gray-600">
@@ -171,7 +165,6 @@
             </div>
         </section>
         
-        <!-- Add/Edit User Form -->
         <form id="userForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-6 rounded-lg shadow-inner">
             <h2 id="formTitle" class="col-span-full text-xl font-semibold text-gray-700 mb-2">အသုံးပြုသူ အသစ်ထည့်ရန်</h2>
             <input type="hidden" id="docId">
@@ -207,10 +200,9 @@
         </form>
     </div>
 
-    <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // DOM elements
@@ -240,20 +232,22 @@
         const totalAmountInput = document.getElementById('totalAmountInput');
         const paidAmountInput = document.getElementById('paidAmountInput');
 
-
-        // Global variables for Firebase
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         let allUsers = [];
         let mbUsageChart, paymentStatusChart;
 
-        // Firebase Initialization
+        // Firebase Initialization with your specific configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY", // Replace with your Firebase API Key
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // Replace with your Firebase Project ID
+            projectId: "YOUR_PROJECT_ID", // Replace with your Firebase Project ID
+            storageBucket: "YOUR_PROJECT_ID.appspot.com", // Replace with your Firebase Project ID
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your Messaging Sender ID
+            appId: "YOUR_APP_ID" // Replace with your App ID
+        };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-
+        
         // Custom message box to replace alert()
         const showMessage = (message, isError = false) => {
             const messageBox = document.createElement('div');
@@ -267,7 +261,6 @@
 
         // Initialize and configure charts
         const initCharts = () => {
-            // Destroy existing charts before creating new ones
             if (mbUsageChart) {
                 mbUsageChart.destroy();
             }
@@ -285,7 +278,6 @@
                 }
             };
 
-            // Options for the MB Usage Chart (Bar Chart)
             const mbUsageChartOptions = {
                 ...baseChartOptions,
                 plugins: {
@@ -302,7 +294,6 @@
                 }
             };
 
-            // Options for the Payment Status Chart (Doughnut Chart)
             const paymentStatusChartOptions = {
                 ...baseChartOptions,
                 plugins: {
@@ -377,14 +368,12 @@
             remainingAmountSumEl.innerText = `${remainingAmountSum.toLocaleString()} ကျပ်`;
         };
 
-        // Initialize the main application after successful login
         const initApp = (user) => {
             initCharts();
             const userId = user.uid;
             userIdDisplay.innerText = `အသုံးပြုသူ ID: ${userId}`;
-            const usersCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/wifi_users`);
+            const usersCollectionRef = collection(db, `wifi_users/${userId}/data`);
             
-            // Listen for real-time changes in the database
             onSnapshot(usersCollectionRef, (snapshot) => {
                 allUsers = [];
                 snapshot.forEach(doc => {
@@ -397,9 +386,8 @@
                 console.error("Error getting user data:", error);
             });
             
-            // Add/Edit user form submission handler
             userForm.addEventListener('submit', async (e) => {
-                e.preventDefault(); // ဒါက စာမျက်နှာ Reload မဖြစ်အောင် တားဆီးပေးပါတယ်။
+                e.preventDefault();
                 const docId = docIdInput.value;
                 const userData = {
                     username: userNameInput.value,
@@ -412,17 +400,15 @@
 
                 try {
                     if (docId) {
-                        // Update existing user
-                        const userRef = doc(db, `/artifacts/${appId}/users/${userId}/wifi_users`, docId);
+                        const userRef = doc(db, `wifi_users/${userId}/data`, docId);
                         await setDoc(userRef, userData);
                         showMessage("အသုံးပြုသူအချက်အလက် အောင်မြင်စွာ ပြင်ဆင်ပြီးပါပြီ။");
                     } else {
-                        // Add new user
                         await addDoc(usersCollectionRef, userData);
                         showMessage("အသုံးပြုသူအသစ် အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
                     }
                     userForm.reset();
-                    docIdInput.value = ''; // Clear docId
+                    docIdInput.value = '';
                     formTitle.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
                     formSubmitButton.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
                 } catch (error) {
@@ -431,13 +417,11 @@
                 }
             });
             
-            // Search bar functionality
             searchBar.addEventListener('keyup', (e) => {
                 filterAndRenderUsers(e.target.value);
             });
         };
 
-        // Edit user function
         window.editUser = (docId) => {
             const userToEdit = allUsers.find(user => user.id === docId);
             if (userToEdit) {
@@ -454,11 +438,10 @@
             }
         };
 
-        // Delete user function
         window.deleteUser = async (docId) => {
             try {
                 const userId = auth.currentUser.uid;
-                const userRef = doc(db, `/artifacts/${appId}/users/${userId}/wifi_users`, docId);
+                const userRef = doc(db, `wifi_users/${userId}/data`, docId);
                 await deleteDoc(userRef);
                 showMessage("အသုံးပြုသူကို အောင်မြင်စွာ ဖျက်လိုက်ပါပြီ။");
             } catch (error) {
@@ -467,7 +450,6 @@
             }
         };
 
-        // Filter and render users based on search query
         const filterAndRenderUsers = (query) => {
             const lowerCaseQuery = query.toLowerCase();
             const filteredUsers = allUsers.filter(user => 
@@ -476,7 +458,6 @@
             renderUsers(filteredUsers);
         };
 
-        // Render the user table
         const renderUsers = (users) => {
             userTableBody.innerHTML = '';
             const today = new Date();
@@ -513,14 +494,12 @@
             });
         };
 
-        // Function to handle the Excel download
         function downloadExcel() {
             if (allUsers.length === 0) {
                 showMessage("Download လုပ်ရန် အချက်အလက်မရှိပါ။", true);
                 return;
             }
 
-            // Create data in the same format as the table
             const data = [
                 ["နံပါတ်", "အမည်", "စတင်ရက်", "သက်တမ်းကုန်ဆုံးရက်", "ကျန်ရှိငွေ", "အသုံးပြုထားသည့် MB"]
             ];
@@ -547,28 +526,17 @@
 
         window.downloadExcel = downloadExcel;
 
-        // Login form submission handler
         loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // ဒါက စာမျက်နှာ Reload မဖြစ်အောင် တားဆီးပေးပါတယ်။
+            e.preventDefault();
             const usernameInput = document.getElementById('username').value;
             const passwordInput = document.getElementById('password').value;
 
-            if (usernameInput === 'wifiservice' && passwordInput === 'wifiservice') {
-                if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken)
-                        .catch((error) => {
-                            console.error("Error signing in with custom token, attempting anonymous sign-in:", error);
-                            signInAnonymously(auth).catch((err) => {
-                                console.error("Anonymous sign-in failed:", err);
-                            });
-                        });
-                } else {
-                    signInAnonymously(auth)
-                        .catch((error) => {
-                            console.error("Anonymous sign-in failed:", error);
-                        });
-                }
-            } else {
+            // Use Firebase Email/Password Authentication
+            // Make sure you have created this user in Firebase Authentication
+            try {
+                await signInWithEmailAndPassword(auth, usernameInput, passwordInput);
+            } catch (error) {
+                console.error("Authentication Error:", error);
                 loginStatusMessage.innerText = "အသုံးပြုသူအမည် သို့မဟုတ် လျှို့ဝှက်နံပါတ် မှားယွင်းနေပါသည်။";
                 loginStatusMessage.classList.remove('hidden');
             }
