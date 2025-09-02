@@ -3,264 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WiFi Dashboard</title>
+  <title>WiFi ဝန်ဆောင်မှု စီမံခန့်ခွဲမှု</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f9;
-      margin: 0;
-      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #e5e7eb;
     }
-    .container {
-      max-width: 400px;
-      margin: 60px auto;
-      padding: 20px;
-      background: #fff;
-      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-      border-radius: 10px;
-      text-align: center;
-    }
-    input, select {
-      width: 90%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    button:hover { background: #0056b3; }
-    .logout-btn {
-      background: #dc3545;
-    }
-    .logout-btn:hover { background: #a71d2a; }
-    .hidden { display: none; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #007bff;
-      color: white;
-    }
+    .warning-light { width: 1rem; height: 1rem; border-radius: 9999px; }
+    .warning-green { background-color: #34d399; box-shadow: 0 0 8px #34d399; }
+    .warning-yellow { background-color: #fcd34d; box-shadow: 0 0 8px #fcd34d; }
+    .warning-red { background-color: #f87171; box-shadow: 0 0 8px #f87171; }
   </style>
 </head>
-<body>
+<body class="p-4 sm:p-8 bg-gray-100 min-h-screen flex flex-col items-center">
 
-  <!-- Register Form -->
-  <div class="container" id="registerContainer">
-    <h2>Register Account</h2>
-    <input type="email" id="registerEmail" placeholder="Email">
-    <input type="password" id="registerPassword" placeholder="Password">
-    <button id="registerBtn">Register</button>
-    <p>Have an account? <a id="showLogin">Login here</a></p>
-    <p id="registerMessage" style="color: red;"></p>
-  </div>
-
-  <!-- Login Form -->
-  <div class="container hidden" id="loginContainer">
-    <h2>WiFi Dashboard Login</h2>
-    <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p>No account? <a id="showRegister">Register here</a></p>
-    <p id="loginMessage" style="color: red;"></p>
+  <!-- Login -->
+  <div id="loginContainer" class="bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-md space-y-6">
+    <h1 class="text-3xl font-bold text-gray-800">Login ဝင်ရန်</h1>
+    <p class="text-gray-600">အသုံးပြုသူအမည်နဲ့ လျှို့ဝှက်နံပါတ် ဖြည့်ပါ</p>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">အသုံးပြုသူအမည်</label>
+        <input type="text" id="username" required class="mt-1 block w-full p-3 border rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">လျှို့ဝှက်နံပါတ်</label>
+        <input type="password" id="password" required class="mt-1 block w-full p-3 border rounded-md">
+      </div>
+      <p id="loginStatusMessage" class="text-red-500 text-sm hidden"></p>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md">Login</button>
+    </form>
   </div>
 
   <!-- Dashboard -->
-  <div class="container hidden" id="mainContent">
-    <h2>WiFi User Dashboard</h2>
+  <div id="mainContent" class="hidden bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-6xl space-y-12">
+    <header class="flex flex-col sm:flex-row justify-between mb-8 pb-4 border-b">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">WiFi ဝန်ဆောင်မှု Dashboard</h1>
+      <div class="text-sm text-gray-600">Default Login User</div>
+    </header>
 
-    <!-- Add User Form -->
-    <input type="text" id="name" placeholder="User Name">
-    <select id="plan">
-      <option value="1 Month">1 Month</option>
-      <option value="3 Months">3 Months</option>
-      <option value="6 Months">6 Months</option>
-    </select>
-    <input type="date" id="expiry">
-    <select id="status">
-      <option value="Active">Active</option>
-      <option value="Expired">Expired</option>
-    </select>
-    <button id="addUserBtn">Add User</button>
-    <button class="logout-btn" id="logoutBtn">Logout</button>
+    <!-- Summary -->
+    <section>
+      <h2 class="text-2xl font-semibold text-gray-700">အကျဉ်းချုပ်</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mt-4">
+        <div class="bg-indigo-50 p-6 rounded-xl"><p>စုစုပေါင်း ကျသင့်ငွေ</p><p id="totalAmountSum" class="text-2xl font-bold">0</p></div>
+        <div class="bg-green-50 p-6 rounded-xl"><p>ပေးချေထားသော စုစုပေါင်းငွေ</p><p id="paidAmountSum" class="text-2xl font-bold">0</p></div>
+        <div class="bg-red-50 p-6 rounded-xl"><p>ပေးရန် ကျန်ရှိသော စုစုပေါင်းငွေ</p><p id="remainingAmountSum" class="text-2xl font-bold">0</p></div>
+      </div>
+    </section>
 
-    <!-- Table -->
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Plan</th>
-          <th>Expiry</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="userTable"></tbody>
-    </table>
+    <!-- User Table -->
+    <section>
+      <h2 class="text-2xl font-semibold text-gray-700">အသုံးပြုသူစာရင်း</h2>
+      <input type="text" id="searchBar" placeholder="အမည်ဖြင့် ရှာဖွေပါ..." class="w-full p-3 border rounded-md my-4">
+      <table class="w-full border">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="p-2">နံပါတ်</th>
+            <th class="p-2">အမည်</th>
+            <th class="p-2">စတင်ရက်</th>
+            <th class="p-2">သက်တမ်းကုန်ဆုံးရက်</th>
+            <th class="p-2">ကျန်ရှိငွေ</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </section>
+
+    <!-- Charts -->
+    <section>
+      <h2 class="text-2xl font-semibold text-gray-700">အချက်အလက် ဇယားများ</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+        <canvas id="mbUsageChart"></canvas>
+        <canvas id="paymentStatusChart"></canvas>
+      </div>
+    </section>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    // Firebase SDKs
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import { 
-      getAuth, 
-      createUserWithEmailAndPassword, 
-      signInWithEmailAndPassword, 
-      onAuthStateChanged, 
-      signOut 
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      updateDoc,
-      deleteDoc,
-      doc,
-      onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
-
-    // Firebase Config (မင်း project ရဲ့ config ထည့်ပါ)
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    // Init Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // UI Elements
-    const registerContainer = document.getElementById("registerContainer");
+  <script>
+    const loginForm = document.getElementById("loginForm");
     const loginContainer = document.getElementById("loginContainer");
     const mainContent = document.getElementById("mainContent");
+    const loginStatusMessage = document.getElementById("loginStatusMessage");
 
-    const registerBtn = document.getElementById("registerBtn");
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+    // Default username/password
+    const DEFAULT_USER = "wifiservice";
+    const DEFAULT_PASS = "wifiservice";
 
-    const registerMessage = document.getElementById("registerMessage");
-    const loginMessage = document.getElementById("loginMessage");
+    loginForm.addEventListener("submit", function(e){
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
 
-    const showLogin = document.getElementById("showLogin");
-    const showRegister = document.getElementById("showRegister");
-
-    const addUserBtn = document.getElementById("addUserBtn");
-    const userTable = document.getElementById("userTable");
-
-    // Switch Forms
-    showLogin.addEventListener("click", () => {
-      registerContainer.classList.add("hidden");
-      loginContainer.classList.remove("hidden");
-    });
-    showRegister.addEventListener("click", () => {
-      loginContainer.classList.add("hidden");
-      registerContainer.classList.remove("hidden");
-    });
-
-    // Register
-    registerBtn.addEventListener("click", async () => {
-      const email = document.getElementById("registerEmail").value;
-      const password = document.getElementById("registerPassword").value;
-
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        registerMessage.innerText = "✅ Register success! Please login.";
-      } catch (error) {
-        registerMessage.innerText = "❌ " + error.message;
-      }
-    });
-
-    // Login
-    loginBtn.addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value;
-      const password = document.getElementById("loginPassword").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        loginMessage.innerText = "❌ " + error.message;
-      }
-    });
-
-    // Logout
-    logoutBtn.addEventListener("click", async () => {
-      await signOut(auth);
-    });
-
-    // Add User to Firestore
-    addUserBtn.addEventListener("click", async () => {
-      const name = document.getElementById("name").value;
-      const plan = document.getElementById("plan").value;
-      const expiry = document.getElementById("expiry").value;
-      const status = document.getElementById("status").value;
-
-      if (!name || !expiry) return alert("Fill all fields");
-
-      await addDoc(collection(db, "wifiUsers"), {
-        name, plan, expiry, status
-      });
-
-      document.getElementById("name").value = "";
-      document.getElementById("expiry").value = "";
-    });
-
-    // Real-time Load Users
-    onSnapshot(collection(db, "wifiUsers"), (snapshot) => {
-      userTable.innerHTML = "";
-      snapshot.forEach((docu) => {
-        const user = docu.data();
-        const row = `
-          <tr>
-            <td>${user.name}</td>
-            <td>${user.plan}</td>
-            <td>${user.expiry}</td>
-            <td>${user.status}</td>
-            <td>
-              <button onclick="deleteUser('${docu.id}')">Delete</button>
-            </td>
-          </tr>
-        `;
-        userTable.innerHTML += row;
-      });
-    });
-
-    // Delete User
-    window.deleteUser = async (id) => {
-      await deleteDoc(doc(db, "wifiUsers", id));
-    };
-
-    // Auth State Listener
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        registerContainer.classList.add("hidden");
+      if(username === DEFAULT_USER && password === DEFAULT_PASS){
         loginContainer.classList.add("hidden");
         mainContent.classList.remove("hidden");
       } else {
-        mainContent.classList.add("hidden");
-        loginContainer.classList.remove("hidden");
+        loginStatusMessage.innerText = "Login မအောင်မြင်ပါ";
+        loginStatusMessage.classList.remove("hidden");
       }
+    });
+
+    // Dummy data
+    const allUsers = [
+      {username: "Aung Aung", startDate:"2025-09-01", endDate:"2025-09-30", totalAmount:20000, paidAmount:15000, mbUsed:500},
+      {username: "Mg Mg", startDate:"2025-09-05", endDate:"2025-09-25", totalAmount:15000, paidAmount:15000, mbUsed:300}
+    ];
+
+    const userTableBody = document.getElementById("userTableBody");
+    const totalAmountSumEl = document.getElementById("totalAmountSum");
+    const paidAmountSumEl = document.getElementById("paidAmountSum");
+    const remainingAmountSumEl = document.getElementById("remainingAmountSum");
+
+    function renderTable(users){
+      userTableBody.innerHTML="";
+      users.forEach((u,i)=>{
+        const remain = u.totalAmount - u.paidAmount;
+        userTableBody.innerHTML += `<tr>
+          <td class="p-2 text-center">${i+1}</td>
+          <td class="p-2">${u.username}</td>
+          <td class="p-2">${u.startDate}</td>
+          <td class="p-2">${u.endDate}</td>
+          <td class="p-2">${remain} ကျပ်</td>
+        </tr>`;
+      });
+    }
+    renderTable(allUsers);
+
+    function updateSummary(){
+      const total = allUsers.reduce((a,b)=>a+b.totalAmount,0);
+      const paid = allUsers.reduce((a,b)=>a+b.paidAmount,0);
+      totalAmountSumEl.innerText = total+" ကျပ်";
+      paidAmountSumEl.innerText = paid+" ကျပ်";
+      remainingAmountSumEl.innerText = (total-paid)+" ကျပ်";
+    }
+    updateSummary();
+
+    // Charts
+    new Chart(document.getElementById("mbUsageChart"),{
+      type:"bar",
+      data:{
+        labels: allUsers.map(u=>u.username),
+        datasets:[{label:"MB Usage", data: allUsers.map(u=>u.mbUsed), backgroundColor:"rgba(79,70,229,0.6)"}]
+      }
+    });
+
+    new Chart(document.getElementById("paymentStatusChart"),{
+      type:"doughnut",
+      data:{
+        labels:["ပေးချေပြီး","ပေးရန်ကျန်"],
+        datasets:[{data:[
+          allUsers.reduce((a,b)=>a+b.paidAmount,0),
+          allUsers.reduce((a,b)=>a+(b.totalAmount-b.paidAmount),0)
+        ],
+        backgroundColor:["#10b981","#f87171"]}]
+      }
+    });
+
+    // Search
+    document.getElementById("searchBar").addEventListener("input", e=>{
+      const q=e.target.value.toLowerCase();
+      renderTable(allUsers.filter(u=>u.username.toLowerCase().includes(q)));
     });
   </script>
 </body>
