@@ -200,27 +200,7 @@
         </form>
     </div>
 
-    <script type="module">
-        // Firebase libraries from CDN
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDgv0iHLhzTP72xx-w_lYkN-dTu8npyGzE",
-            authDomain: "waizinsoewifi.firebaseapp.com",
-            projectId: "waizinsoewifi",
-            storageBucket: "waizinsoewifi.firebasestorage.app",
-            messagingSenderId: "1080693125344",
-            appId: "1:1080693125344:web:8059d6ff4b98ae61ad6085"
-        };
-    
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-    
+    <script>
         // DOM elements
         const loginContainer = document.getElementById('loginContainer');
         const loginForm = document.getElementById('loginForm');
@@ -238,8 +218,7 @@
         const formTitle = document.getElementById('formTitle');
         const formSubmitButton = document.getElementById('formSubmitButton');
         const docIdInput = document.getElementById('docId');
-    
-        // New unique IDs for the user form
+
         const userNameInput = document.getElementById('userNameInput');
         const userStartDateInput = document.getElementById('userStartDateInput');
         const userEndDateInput = document.getElementById('userEndDateInput');
@@ -250,7 +229,21 @@
         let allUsers = [];
         let mbUsageChart, paymentStatusChart;
     
-        // Custom message box to replace alert()
+        // Default users array (replaces Firebase data)
+        let wifiUsers = [
+            { id: "1", username: "Aung Aung", startDate: "2023-08-01", endDate: "2023-09-01", mbUsed: 15000, totalAmount: 15000, paidAmount: 15000 },
+            { id: "2", username: "Maung Maung", startDate: "2023-08-10", endDate: "2023-09-10", mbUsed: 12000, totalAmount: 12000, paidAmount: 10000 },
+            { id: "3", username: "Mya Mya", startDate: "2023-08-15", endDate: "2023-09-15", mbUsed: 18000, totalAmount: 18000, paidAmount: 15000 },
+        ];
+    
+        // A simple UUID generator for new users
+        const generateUUID = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+    
         const showMessage = (message, isError = false) => {
             const messageBox = document.createElement('div');
             messageBox.innerText = message;
@@ -261,7 +254,6 @@
             }, 3000);
         };
     
-        // Initialize and configure charts
         const initCharts = () => {
             if (mbUsageChart) {
                 mbUsageChart.destroy();
@@ -341,7 +333,6 @@
             });
         };
     
-        // Update charts with new data
         const updateCharts = () => {
             const userLabels = allUsers.map(user => user.username.split(' ').map(word => {
                 if (word.length > 16) {
@@ -360,7 +351,6 @@
             paymentStatusChart.update();
         };
     
-        // Update summary metrics
         const updateSummaryMetrics = () => {
             const totalAmountSum = allUsers.reduce((sum, user) => sum + user.totalAmount, 0);
             const paidAmountSum = allUsers.reduce((sum, user) => sum + user.paidAmount, 0);
@@ -370,206 +360,8 @@
             remainingAmountSumEl.innerText = `${remainingAmountSum.toLocaleString()} ကျပ်`;
         };
     
-        // Initialize the main application after successful login
-        const initApp = (user) => {
+        const initApp = () => {
+            allUsers = [...wifiUsers]; // Use a copy of the default data
             initCharts();
-            const userId = user.uid;
-            userIdDisplay.innerText = `အသုံးပြုသူ ID: ${userId}`;
-            const usersCollectionRef = collection(db, `users/${userId}/wifi_users`);
-    
-            // Listen for real-time changes in the database
-            onSnapshot(usersCollectionRef, (snapshot) => {
-                allUsers = [];
-                snapshot.forEach(doc => {
-                    allUsers.push({ id: doc.id, ...doc.data() });
-                });
-                filterAndRenderUsers(searchBar.value);
-                updateSummaryMetrics();
-                updateCharts();
-            }, (error) => {
-                console.error("Error getting user data:", error);
-            });
-    
-            // Add/Edit user form submission handler
-            userForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const docId = docIdInput.value;
-                const userData = {
-                    username: userNameInput.value,
-                    startDate: userStartDateInput.value,
-                    endDate: userEndDateInput.value,
-                    mbUsed: parseInt(mbUsedInput.value),
-                    totalAmount: parseInt(totalAmountInput.value),
-                    paidAmount: parseInt(paidAmountInput.value),
-                };
-    
-                try {
-                    if (docId) {
-                        const userRef = doc(db, `users/${userId}/wifi_users`, docId);
-                        await setDoc(userRef, userData);
-                        showMessage("အသုံးပြုသူအချက်အလက် အောင်မြင်စွာ ပြင်ဆင်ပြီးပါပြီ။");
-                    } else {
-                        await addDoc(usersCollectionRef, userData);
-                        showMessage("အသုံးပြုသူအသစ် အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
-                    }
-                    userForm.reset();
-                    docIdInput.value = '';
-                    formTitle.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
-                    formSubmitButton.innerText = 'အသုံးပြုသူ အသစ်ထည့်ရန်';
-                } catch (error) {
-                    console.error("Error saving document:", error);
-                    showMessage("အချက်အလက် သိမ်းဆည်းရာတွင် အမှားအယွင်းဖြစ်ပေါ်ခဲ့ပါသည်။", true);
-                }
-            });
-    
-            // Search bar functionality
-            searchBar.addEventListener('keyup', (e) => {
-                filterAndRenderUsers(e.target.value);
-            });
-        };
-    
-        // Edit user function
-        window.editUser = (docId) => {
-            const userToEdit = allUsers.find(user => user.id === docId);
-            if (userToEdit) {
-                docIdInput.value = userToEdit.id;
-                userNameInput.value = userToEdit.username;
-                userStartDateInput.value = userToEdit.startDate;
-                userEndDateInput.value = userToEdit.endDate;
-                mbUsedInput.value = userToEdit.mbUsed;
-                totalAmountInput.value = userToEdit.totalAmount;
-                paidAmountInput.value = userToEdit.paidAmount;
-    
-                formTitle.innerText = 'အသုံးပြုသူ အချက်အလက် ပြင်ဆင်ရန်';
-                formSubmitButton.innerText = 'အချက်အလက် ပြင်ဆင်ရန်';
-            }
-        };
-    
-        // Delete user function
-        window.deleteUser = async (docId) => {
-            try {
-                const userId = auth.currentUser.uid;
-                const userRef = doc(db, `users/${userId}/wifi_users`, docId);
-                await deleteDoc(userRef);
-                showMessage("အသုံးပြုသူကို အောင်မြင်စွာ ဖျက်လိုက်ပါပြီ။");
-            } catch (error) {
-                console.error("Error deleting document:", error);
-                showMessage("ဖျက်ရာတွင် အမှားအယွင်းဖြစ်ပေါ်ခဲ့ပါသည်။", true);
-            }
-        };
-    
-        // Filter and render users based on search query
-        const filterAndRenderUsers = (query) => {
-            const lowerCaseQuery = query.toLowerCase();
-            const filteredUsers = allUsers.filter(user =>
-                user.username.toLowerCase().includes(lowerCaseQuery)
-            );
-            renderUsers(filteredUsers);
-        };
-    
-        // Render the user table
-        const renderUsers = (users) => {
-            userTableBody.innerHTML = '';
-            const today = new Date();
-            users.forEach((user, index) => {
-                const row = document.createElement('tr');
-                const endDate = new Date(user.endDate);
-                const oneDayInMs = 24 * 60 * 60 * 1000;
-                const timeDiff = endDate.getTime() - today.getTime();
-                const timeDiffDays = Math.ceil(timeDiff / oneDayInMs);
-                let warningClass = '';
-                if (timeDiffDays <= 7) {
-                    warningClass = 'warning-red';
-                } else if (timeDiffDays <= 15) {
-                    warningClass = 'warning-yellow';
-                } else if (timeDiffDays <= 30) {
-                    warningClass = 'warning-green';
-                }
-                const remainingAmount = user.totalAmount - user.paidAmount;
-                row.innerHTML = `
-                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.username}</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.startDate}</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${user.endDate}</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${remainingAmount.toLocaleString()} ကျပ်</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div class="warning-light ${warningClass}"></div>
-                    </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="editUser('${user.id}')" class="text-indigo-600 hover:text-indigo-900 mr-4">ပြင်ဆင်ရန်</button>
-                        <button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-900">ဖျက်ရန်</button>
-                    </td>
-                `;
-                userTableBody.appendChild(row);
-            });
-        };
-    
-        // Function to handle the Excel download
-        function downloadExcel() {
-            if (allUsers.length === 0) {
-                showMessage("Download လုပ်ရန် အချက်အလက်မရှိပါ။", true);
-                return;
-            }
-    
-            const data = [
-                ["နံပါတ်", "အမည်", "စတင်ရက်", "သက်တမ်းကုန်ဆုံးရက်", "ကျန်ရှိငွေ", "အသုံးပြုထားသည့် MB"]
-            ];
-    
-            allUsers.forEach((user, index) => {
-                const remainingAmount = user.totalAmount - user.paidAmount;
-                data.push([
-                    index + 1,
-                    user.username,
-                    user.startDate,
-                    user.endDate,
-                    remainingAmount,
-                    user.mbUsed
-                ]);
-            });
-    
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "အသုံးပြုသူစာရင်း");
-            XLSX.writeFile(wb, "wifi_users_report.xlsx");
-    
-            showMessage("Excel ကို အောင်မြင်စွာ Download လုပ်ပြီးပါပြီ။");
-        }
-    
-        window.downloadExcel = downloadExcel;
-        window.editUser = editUser;
-        window.deleteUser = deleteUser;
-    
-        // Login form submission handler
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const usernameInput = document.getElementById('username').value;
-            const passwordInput = document.getElementById('password').value;
-    
-            if (usernameInput === 'wifiservice' && passwordInput === 'wifiservice') {
-                try {
-                    await signInWithEmailAndPassword(auth, 'wifiservice@waizinsoewifi.com', 'wifiservice');
-                } catch (error) {
-                    loginStatusMessage.innerText = "Login လုပ်ရာတွင် အမှားအယွင်းဖြစ်ပေါ်ခဲ့ပါသည်။";
-                    loginStatusMessage.classList.remove('hidden');
-                    console.error("Login Error:", error);
-                }
-            } else {
-                loginStatusMessage.innerText = "အသုံးပြုသူအမည် သို့မဟုတ် လျှို့ဝှက်နံပါတ် မှားယွင်းနေပါသည်။";
-                loginStatusMessage.classList.remove('hidden');
-            }
-        });
-    
-        // Initialize charts and listen for auth state change on page load
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                loginContainer.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-                initApp(user);
-            } else {
-                loginContainer.classList.remove('hidden');
-                mainContent.classList.add('hidden');
-            }
-        });
-    </script>
-</body>
-</html>
+            userIdDisplay.innerText = `Local Data`; // Display a message instead of user ID
+            filterAndRenderUsers(searchBar.value);
